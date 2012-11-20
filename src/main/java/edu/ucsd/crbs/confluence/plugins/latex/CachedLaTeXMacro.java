@@ -28,7 +28,7 @@ import javax.imageio.ImageIO;
 import javax.swing.JLabel;
 
 import org.apache.commons.codec.binary.Hex;
-import org.scilab.forge.jlatexmath.TeXConstants; 
+import org.scilab.forge.jlatexmath.TeXConstants;
 import org.scilab.forge.jlatexmath.TeXFormula;
 import org.scilab.forge.jlatexmath.TeXIcon;
 
@@ -38,31 +38,32 @@ import java.security.NoSuchAlgorithmException;
 public class CachedLaTeXMacro extends BaseMacro implements Macro
 {
 
-    @Override
-    public boolean hasBody()
-    {
-        return true;
-    }
- 
-    @Override
-    public RenderMode getBodyRenderMode()
-    {
-        return RenderMode.NO_RENDER;
-    }
+	@Override
+	public boolean hasBody()
+	{
+		return true;
+	}
+
+	@Override
+	public RenderMode getBodyRenderMode()
+	{
+		return RenderMode.NO_RENDER;
+	}
 
 	private static final String DOT = ".";
 	private static final String ATTACHMENT_EXT = "png";
-	
+	private static final int ATTACHMENT_COMMENT_MAX_LENGTH = 254;
+
 	private final AttachmentManager attachmentManager;
 	private final SettingsManager settingsManager;
 
-    public CachedLaTeXMacro(AttachmentManager attachmentManager, SettingsManager settingsManager)
-    {
-    	this.attachmentManager = attachmentManager;
-    	this.settingsManager = settingsManager;
-    }
+	public CachedLaTeXMacro(AttachmentManager attachmentManager, SettingsManager settingsManager)
+	{
+		this.attachmentManager = attachmentManager;
+		this.settingsManager = settingsManager;
+	}
 
-    // Confluence < 4.0
+	// Confluence < 4.0
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public String execute(Map parameters, String body, RenderContext context) throws MacroException
@@ -77,103 +78,109 @@ public class CachedLaTeXMacro extends BaseMacro implements Macro
 		throw new MacroException("LaTeX macro is only available on Pages.");
 	}
 
-	// Confluence 4.0 + 
-    @Override
-    public String execute(Map<String, String> parameters, String body, ConversionContext context) throws MacroExecutionException
-    {
-    	return execute(parameters, body, context.getEntity());
-    }
-    
-    /**
-     * This method returns XHTML to be displayed on the page that uses this macro.
-     */
-    private String execute(Map<String, String> parameters, String body, ContentEntityObject page) throws MacroExecutionException
-    {
-    	body = body.trim();
-    	
-    	if (body.length() < 1)
-    	{
-    		return "";
-    	}
-    	
-    	String latexHash = SHA1(body);
-    	String attachmentFileName = latexHash + DOT + ATTACHMENT_EXT;
-    	
-    	Attachment attachment;
-    	
-    	if (null == (attachment = this.attachmentManager.getAttachment(page, attachmentFileName)))
-    	{
-    		// need to generate image
-    		TeXFormula formula = new TeXFormula(body);
-        	TeXIcon icon = formula.createTeXIcon(TeXConstants.STYLE_DISPLAY, 20);
-        	
-        	BufferedImage image = new BufferedImage(icon.getIconWidth(), icon.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
-        	
-        	Graphics2D g2 = image.createGraphics();
-        	
-        	JLabel jl = new JLabel();
-        	jl.setForeground(new Color(0, 0, 0));
-        	icon.paintIcon(jl, g2, 0, 0);
-        	
-        	final ByteArrayOutputStream output = new ByteArrayOutputStream() {
-        	    @Override
-        	    public synchronized byte[] toByteArray() {
-        	        return this.buf;
-        	    }
-        	};
-        	
-        	try {
+	// Confluence 4.0 +
+	@Override
+	public String execute(Map<String, String> parameters, String body, ConversionContext context) throws MacroExecutionException
+	{
+		return execute(parameters, body, context.getEntity());
+	}
+
+	/**
+	 * This method returns XHTML to be displayed on the page that uses this macro.
+	 */
+	private String execute(Map<String, String> parameters, String body, ContentEntityObject page) throws MacroExecutionException
+	{
+		body = body.trim();
+
+		if (body.length() < 1)
+		{
+			return "";
+		}
+
+		String latexHash = SHA1(body);
+		String attachmentFileName = latexHash + DOT + ATTACHMENT_EXT;
+
+		Attachment attachment;
+
+		if (null == (attachment = this.attachmentManager.getAttachment(page, attachmentFileName)))
+		{
+			// need to generate image
+			TeXFormula formula = new TeXFormula(body);
+			TeXIcon icon = formula.createTeXIcon(TeXConstants.STYLE_DISPLAY, 20);
+
+			BufferedImage image = new BufferedImage(icon.getIconWidth(), icon.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
+
+			Graphics2D g2 = image.createGraphics();
+
+			JLabel jl = new JLabel();
+			jl.setForeground(new Color(0, 0, 0));
+			icon.paintIcon(jl, g2, 0, 0);
+
+			final ByteArrayOutputStream output = new ByteArrayOutputStream() {
+				@Override
+				public synchronized byte[] toByteArray() {
+					return this.buf;
+				}
+			};
+
+			try {
 				ImageIO.write(image, "png", output);
 			} catch (IOException e) {
 				e.printStackTrace();
 				return null;
 			}
-        	
-        	InputStream attachmentData = new ByteArrayInputStream(output.toByteArray(), 0, output.size());
-        	attachment = new Attachment(attachmentFileName, "image/png", output.size(), body);
-        	attachment.setContent(page);
-        	
-        	try {
+
+			InputStream attachmentData = new ByteArrayInputStream(output.toByteArray(), 0, output.size());
+
+			String attachmentComment = body;
+			if (attachmentComment.length() > ATTACHMENT_COMMENT_MAX_LENGTH) {
+				attachmentComment = attachmentComment.substring(0, ATTACHMENT_COMMENT_MAX_LENGTH);
+			}
+
+			attachment = new Attachment(attachmentFileName, "image/png", output.size(), attachmentComment);
+			attachment.setContent(page);
+
+			try {
 				this.attachmentManager.saveAttachment(attachment, null, attachmentData);
 			} catch (IOException e) {
 				e.printStackTrace();
 				return null;
 			}
-    	}
+		}
 
-        return (attachment == null) ? null :
-        		"<div class=\"latex_img\"><img src=\"" + this.settingsManager.getGlobalSettings().getBaseUrl() + 
-        						attachment.getDownloadPath() + "\" /></div>";
-    }
+		return (attachment == null) ? null :
+				"<div class=\"latex_img\"><img src=\"" + this.settingsManager.getGlobalSettings().getBaseUrl() +
+								attachment.getDownloadPath() + "\" /></div>";
+	}
 
-    @Override
-    public BodyType getBodyType()
-    {
-        return BodyType.PLAIN_TEXT;
-    }
+	@Override
+	public BodyType getBodyType()
+	{
+		return BodyType.PLAIN_TEXT;
+	}
 
-    @Override
-    public OutputType getOutputType()
-    {
-        return OutputType.BLOCK;
-    }
+	@Override
+	public OutputType getOutputType()
+	{
+		return OutputType.BLOCK;
+	}
 
-    private static String SHA1(String input)
-    {
-    	String result = null;
-    	MessageDigest crypt;
+	private static String SHA1(String input)
+	{
+		String result = null;
+		MessageDigest crypt;
 		try {
 			crypt = MessageDigest.getInstance("SHA-1");
 			crypt.reset();
-	    	crypt.update(input.getBytes("utf8"));
-	    	
+			crypt.update(input.getBytes("utf8"));
+
 			result = new String(Hex.encodeHex(crypt.digest()));
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		}
-        
-        return result;
-    }
+
+		return result;
+	}
 }
