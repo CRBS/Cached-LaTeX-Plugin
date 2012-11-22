@@ -1,13 +1,16 @@
 package edu.ucsd.crbs.confluence.plugins.latex;
 
 import com.atlassian.confluence.content.render.xhtml.ConversionContext;
+import com.atlassian.confluence.content.render.xhtml.ConversionContextOutputType;
 import com.atlassian.confluence.content.render.xhtml.DefaultConversionContext;
+
 import com.atlassian.confluence.core.ContentEntityObject;
 import com.atlassian.confluence.macro.Macro;
 import com.atlassian.confluence.macro.MacroExecutionException;
 import com.atlassian.confluence.pages.Attachment;
 import com.atlassian.confluence.pages.AttachmentManager;
 import com.atlassian.confluence.pages.Comment;
+import com.atlassian.confluence.pages.Draft;
 import com.atlassian.confluence.pages.PageManager;
 import com.atlassian.confluence.renderer.PageContext;
 import com.atlassian.confluence.setup.settings.SettingsManager;
@@ -24,13 +27,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.StringBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.Map;
 
 import javax.imageio.ImageIO;
 import javax.swing.JLabel;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang.StringUtils;
 
@@ -76,20 +82,6 @@ public class CachedLaTeXMacro extends BaseMacro implements Macro
 	}
 
 	// Confluence < 4.0
-	// @SuppressWarnings({ "unchecked", "rawtypes" })
-	// @Override
-	// public String execute(Map parameters, String body, RenderContext context) throws MacroException
-	// {
-	// 	if (context.getClass().equals(PageContext.class)) {
-	// 		try {
-	// 			return execute(parameters, body, ((PageContext) context).getEntity());
-	// 		} catch (MacroExecutionException e) {
-	// 			throw new MacroException(e);
-	// 		}
-	// 	}
-	// 	throw new MacroException("LaTeX macro is only available on Pages.");
-	// }
-
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public String execute(Map parameters, String body, RenderContext renderContext) throws MacroException
@@ -104,15 +96,8 @@ public class CachedLaTeXMacro extends BaseMacro implements Macro
 		}
 	}
 
-	// Confluence 4.0 +
-	// @Override
-	// public String execute(Map<String, String> parameters, String body, ConversionContext context) throws MacroExecutionException
-	// {
-	// 	return execute(parameters, body, context.getEntity());
-	// }
-
 	/**
-	 * Process a request to render an {attachments} macro
+	 * Process a request to render a {latex} macro
 	 */
 	@Override
 	public String execute(Map<String, String> parameters, String body, ConversionContext conversionContext) throws MacroExecutionException
@@ -120,8 +105,6 @@ public class CachedLaTeXMacro extends BaseMacro implements Macro
 		String pageTitle = parameters.get("page");
 		ContentEntityObject contentObject;
 		PageContext pageContext;
-
-		log.debug("Page Title: {}", pageTitle);
 
 		if (StringUtils.isNotBlank(pageTitle))
 		{
@@ -145,13 +128,13 @@ public class CachedLaTeXMacro extends BaseMacro implements Macro
 		if (contentObject instanceof Comment)
 			contentObject = ((Comment) contentObject).getOwner();
 
-	// /**
-	//  * This method returns XHTML to be displayed on the page that uses this macro.
-	//  */
-	// private String execute(Map<String, String> parameters, String body, ContentEntityObject page) throws MacroExecutionException
-	// {
-		body = body.trim();
+		boolean isPreview = (contentObject.getClass() == Draft.class);
+		if (isPreview)
+		{
+			log.debug("IS PREVIEW");
+		}
 
+		body = body.trim();
 		if (body.length() < 1)
 		{
 			return "";
@@ -160,13 +143,24 @@ public class CachedLaTeXMacro extends BaseMacro implements Macro
 		String latexHash = SHA1(body);
 		String attachmentFileName = latexHash + DOT + ATTACHMENT_EXT;
 
-		log.debug("Attachment Filename: {}", attachmentFileName);
+		log.debug("{} - Attachment Filename: {}", contentObject.toString(), attachmentFileName);
 
 		Attachment attachment = attachmentManager.getAttachment(contentObject, attachmentFileName);
+		String attachmentURL = null;
 
 		if (attachment == null)
 		{
-			log.debug("Attachment was null, need to create new. contentObject: {}", contentObject.toString());
+			StringBuffer logString = new StringBuffer("Attachment was NULL, need to create new.\nCurrent Attachments:\n");
+			List<Attachment> attachments = attachmentManager.getLatestVersionsOfAttachments(contentObject);
+
+			for (Attachment att : attachments)
+			{
+				logString.append(" - ");
+				logString.append(att.toString());
+				logString.append("\n");
+			}
+
+			log.debug(logString.toString());
 
 			// need to generate image
 			TeXFormula formula = new TeXFormula(body);
@@ -194,33 +188,48 @@ public class CachedLaTeXMacro extends BaseMacro implements Macro
 				return null;
 			}
 
-			InputStream attachmentData = new ByteArrayInputStream(output.toByteArray(), 0, output.size());
+			byte[] attachmentDataByteArray = output.toByteArray();
 
-			String attachmentComment = body;
-			if (attachmentComment.length() > ATTACHMENT_COMMENT_MAX_LENGTH) {
-				attachmentComment = attachmentComment.substring(0, ATTACHMENT_COMMENT_MAX_LENGTH - ATTACHMENT_COMMENT_SUFFIX.length()) + ATTACHMENT_COMMENT_SUFFIX;
+			// If we're previewing, then we don't want to create the attachment yet, we just want to
+			// create a base64 URL to show the preview.
+			if (isPreview)
+			{
+				attachmentURL = getBase64StringOfPNGData(attachmentDataByteArray);
 			}
+			// otherwise, we want to save the attachment to the page for caching
+			else
+			{
+				InputStream attachmentData = new ByteArrayInputStream(attachmentDataByteArray, 0, output.size());
 
-			attachment = new Attachment(attachmentFileName, ATTACHMENT_MIMETYPE, output.size(), attachmentComment);
-			attachment.setContent(contentObject);
+				String attachmentComment = body;
+				if (attachmentComment.length() > ATTACHMENT_COMMENT_MAX_LENGTH) {
+					attachmentComment = attachmentComment.substring(0, ATTACHMENT_COMMENT_MAX_LENGTH - ATTACHMENT_COMMENT_SUFFIX.length()) + ATTACHMENT_COMMENT_SUFFIX;
+				}
 
-			try {
-				attachmentManager.saveAttachment(attachment, null, attachmentData);
-			} catch (IOException e) {
-				e.printStackTrace();
-				return null;
+				attachment = new Attachment(attachmentFileName, ATTACHMENT_MIMETYPE, output.size(), attachmentComment);
+				attachment.setContent(contentObject);
+
+				try {
+					attachmentManager.saveAttachment(attachment, null, attachmentData);
+				} catch (IOException e) {
+					e.printStackTrace();
+					return null;
+				}
 			}
 		}
 		else
 		{
-			log.debug("Attachment was not null: {}", attachment.toString());
+			log.debug("Attachment was NOT NULL: {}", attachment.toString());
 		}
 
-		String url = settingsManager.getGlobalSettings().getBaseUrl() + attachment.getDownloadPath();
+		if (attachmentURL == null)
+		{
+			attachmentURL = settingsManager.getGlobalSettings().getBaseUrl() + attachment.getDownloadPath();
+		}
 
-		log.debug("Attachment URL: {}", url);
+		log.debug("Attachment URL: {}", attachmentURL);
 
-		return (attachment == null) ? null : "<div class=\"latex_img\"><img src=\"" + url + "\" /></div>";
+		return (attachmentURL == null) ? null : "<div class=\"latex_img\"><img src=\"" + attachmentURL + "\" /></div>";
 	}
 
 	private ContentEntityObject getPage(PageContext context, String pageTitleToRetrieve)
@@ -270,5 +279,12 @@ public class CachedLaTeXMacro extends BaseMacro implements Macro
 		}
 
 		return result;
+	}
+
+	private static String getBase64StringOfPNGData(byte[] pngData)
+	{
+		StringBuffer output = new StringBuffer("data:image/png;base64,");
+		output.append(Base64.encodeBase64String(pngData).replaceAll("(\\r|\\n)", ""));
+		return output.toString();
 	}
 }
