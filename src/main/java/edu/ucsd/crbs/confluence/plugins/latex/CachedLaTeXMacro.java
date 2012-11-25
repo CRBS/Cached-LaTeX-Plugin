@@ -103,14 +103,14 @@ public class CachedLaTeXMacro extends BaseMacro implements Macro
 	public String execute(Map<String, String> parameters, String body, ConversionContext conversionContext) throws MacroExecutionException
 	{
 		String pageTitle = parameters.get("page");
-		ContentEntityObject contentObject;
+		ContentEntityObject pageObject;
 		PageContext pageContext;
 
 		if (StringUtils.isNotBlank(pageTitle))
 		{
-			contentObject = getPage(conversionContext.getPageContext(), pageTitle);
-			pageContext = new PageContext(contentObject);
-			if (contentObject == null)
+			pageObject = getPage(conversionContext.getPageContext(), pageTitle);
+			pageContext = new PageContext(pageObject);
+			if (pageObject == null)
 			{
 				return null;
 			}
@@ -118,20 +118,20 @@ public class CachedLaTeXMacro extends BaseMacro implements Macro
 		else
 		{
 			// retrieve a reference to the body object this macro is in
-			contentObject = conversionContext.getEntity();
+			pageObject = conversionContext.getEntity();
 			pageContext = conversionContext.getPageContext();
 		}
 		String sortBy = null;
 		String sortOrder = null;
 
 		// CONF-9989: if this macro is run from within a comment, use the underlying page to find the attachments
-		if (contentObject instanceof Comment)
-			contentObject = ((Comment) contentObject).getOwner();
+		if (pageObject instanceof Comment)
+			pageObject = ((Comment) pageObject).getOwner();
 
-		boolean isPreview = (contentObject.getClass() == Draft.class);
-		if (isPreview)
+		boolean shouldUseBase64Image = ((pageObject.getClass() == Draft.class) || !pageObject.isLatestVersion());
+		if (shouldUseBase64Image)
 		{
-			log.debug("IS PREVIEW");
+			log.debug("using base64'd inline image");
 		}
 
 		body = body.trim();
@@ -143,15 +143,15 @@ public class CachedLaTeXMacro extends BaseMacro implements Macro
 		String latexHash = SHA1(body);
 		String attachmentFileName = latexHash + DOT + ATTACHMENT_EXT;
 
-		log.debug("{} - Attachment Filename: {}", contentObject.toString(), attachmentFileName);
+		log.debug("{} - Attachment Filename: {}", pageObject.toString(), attachmentFileName);
 
-		Attachment attachment = attachmentManager.getAttachment(contentObject, attachmentFileName);
+		Attachment attachment = attachmentManager.getAttachment(pageObject, attachmentFileName);
 		String attachmentURL = null;
 
 		if (attachment == null)
 		{
 			StringBuffer logString = new StringBuffer("Attachment was NULL, need to create new.\nCurrent Attachments:\n");
-			List<Attachment> attachments = attachmentManager.getLatestVersionsOfAttachments(contentObject);
+			List<Attachment> attachments = attachmentManager.getLatestVersionsOfAttachments(pageObject);
 
 			for (Attachment att : attachments)
 			{
@@ -192,7 +192,7 @@ public class CachedLaTeXMacro extends BaseMacro implements Macro
 
 			// If we're previewing, then we don't want to create the attachment yet, we just want to
 			// create a base64 URL to show the preview.
-			if (isPreview)
+			if (shouldUseBase64Image)
 			{
 				attachmentURL = getBase64StringOfPNGData(attachmentDataByteArray);
 			}
@@ -207,7 +207,7 @@ public class CachedLaTeXMacro extends BaseMacro implements Macro
 				}
 
 				attachment = new Attachment(attachmentFileName, ATTACHMENT_MIMETYPE, output.size(), attachmentComment);
-				attachment.setContent(contentObject);
+				attachment.setContent(pageObject);
 
 				try {
 					attachmentManager.saveAttachment(attachment, null, attachmentData);
