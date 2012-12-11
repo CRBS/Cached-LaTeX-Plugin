@@ -1,9 +1,9 @@
 <atlassian-plugin key="${project.groupId}.${project.artifactId}" name="${project.name}" plugins-version="2">
-    <plugin-info>
-        <description>${project.description}</description>
-        <version>${project.version}</version>
-        <vendor name="${project.organization.name}" url="${project.organization.url}" />
-    </plugin-info>
+	<plugin-info>
+		<description>${project.description}</description>
+		<version>${project.version}</version>
+		<vendor name="${project.organization.name}" url="${project.organization.url}" />
+	</plugin-info>
 
 	<resource key="icons" name="icons/" type="download" location="icons" />
 
@@ -13,13 +13,13 @@
 		<description>Convert LaTeX-formatted text in wiki markup to images for display.</description>
 	</macro>
 
-    <xhtml-macro name="LaTeX" key="latex-xhtml"
-     class="edu.ucsd.crbs.confluence.plugins.latex.CachedLaTeXMacro"
-     icon="/download/resources/${project.groupId}.${project.artifactId}/icons/tex.png">
-     	<category name="visuals" />
-        <device-type>mobile</device-type>
-        <parameters/>
-        <description>Convert LaTeX text to images for display.</description>
-    </xhtml-macro>
-    
+	<xhtml-macro name="LaTeX" key="latex-xhtml"
+	 class="edu.ucsd.crbs.confluence.plugins.latex.CachedLaTeXMacro"
+	 icon="/download/resources/${project.groupId}.${project.artifactId}/icons/tex.png">
+		<category name="visuals" />
+		<device-type>mobile</device-type>
+		<parameters/>
+		<description>Convert LaTeX text to images for display.</description>
+	</xhtml-macro>
+
 </atlassian-plugin>

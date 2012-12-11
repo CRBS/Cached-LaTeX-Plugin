@@ -1,0 +1,81 @@
+This software is Copyright © 2012 The Regents of the University of California.
+All Rights Reserved.
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for educational, research and non-profit purposes, without fee,
+and without a written agreement is hereby granted, provided that the above
+copyright notice, this paragraph and the following three paragraphs appear in
+all copies.
+
+Permission to make commercial use of this software may be obtained by contacting:
+Technology Transfer Office
+9500 Gilman Drive, Mail Code 0910
+University of California
+La Jolla, CA 92093-0910
+(858) 534-5815
+invent@ucsd.edu
+
+This software program and documentation are copyrighted by The Regents of the
+University of California. The software program and documentation are supplied
+"as is", without any accompanying services from The Regents. The Regents does
+not warrant that the operation of the program will be uninterrupted or error-
+free. The end-user understands that the program was developed for research
+purposes and is advised not to rely exclusively on the program for any reason.
+
+IN NO EVENT SHALL THE UNIVERSITY OF CALIFORNIA BE LIABLE TO ANY PARTY FOR
+DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST
+PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF
+THE UNIVERSITY OF CALIFORNIA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE. THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS" BASIS, AND
+THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE, SUPPORT,
+UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+
+---
+
+JLaTeXMath is licensed under the GNU General Public License.
+
+JLaTeXMath Library - Displays LaTeX commands
+JLateXMath is an fork of JMathTeX with a lot of modifications to support
+many more LaTeX commands, drop of the jdom dependency and easy evolution
+capabilities.
+
+Copyright (C) 2009-2011 DENIZET Calixte
+Copyright (C) Kris Coolsaet
+Copyright (C) Nico Van Cleemput
+Copyright (C) Kurt Vermeulen
+Copyright 2004-2007 Universiteit Gent
+
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; see the file GPL_COPYING. If not, write to the
+Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
+MA 02110-1301, USA.
+
+---
+
+The archive contains several fonts :
+1) the fonts eufb10.ttf, eufm10.ttf, msam10.ttf and msbm10.ttf are under OFL (Open Font License);
+
+2) the font dsrom10.ttf is under a free license;
+
+3) the font stmary10.ttf and rsfs10.ttf are in PD (Public Domain);
+
+4) the fonts cmbsy10.ttf, cmbx10.ttf, cmbxti10.ttf, cmex10.ttf, cmmi10.ttf, cmr10.ttf, cmss10.ttf, cmssbx10.ttf, cmsy10.ttf and cmtt10.ttf are under Knuth License.
+
+5) the greek fonts fcmbipg.ttf, fcmripg.tff, fcmrpg.ttf, fcsropg.ttf, fcmbpg.ttf, fcsbpg.ttf, fctrpg.ttf, fcsrpg.ttf are under GNU GPL version 2.
+
+6) the cyrillic fonts wnbx10.ttf, wnss10.ttf, wnti10.ttf, wnr10.ttf, wnssi10.ttf, wnbxti10.ttf, wnssbx10.ttf, wntt10.ttf are under Knuth License.
+
+You can find a copy of these licenses in lib/jlatexmath-1.0.0-src/src/org/scilab/forge/jlatexmath/fonts/licences.
